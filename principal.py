@@ -18,7 +18,8 @@ class VentanaPrincipal(QWidget):
         super().__init__()
         self.setWindowTitle("Sistema de Gestión")
         self.setGeometry(100, 100, 1000, 600)
-        self.setStyleSheet("background-color: #F8F9FA;")
+        self.setStyleSheet("background-color: #FFF8FC;")  # Fondo general claro con un toque rosado
+
 
         self.stacked_widget = QStackedWidget()
 
@@ -46,8 +47,8 @@ class VentanaPrincipal(QWidget):
         sidebar_widget = QWidget()
         sidebar_widget.setFixedWidth(220)
         sidebar_widget.setStyleSheet("""
-            background-color: #E9ECEF;
-            border-right: 1px solid #CED4DA;
+             background-color: #6F2DA8;
+             border-right: 1px solid #5A189A;
         """)
 
         botones = [
@@ -61,7 +62,7 @@ class VentanaPrincipal(QWidget):
 
         label_title = QLabel("Menú Principal")
         label_title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-        label_title.setStyleSheet("color: #343A40; padding: 20px 10px;")
+        label_title.setStyleSheet("color: #FFD700; padding: 20px 10px;")
         label_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar.addWidget(label_title)
 
@@ -70,17 +71,17 @@ class VentanaPrincipal(QWidget):
             btn.setFont(QFont("Segoe UI", 11))
             btn.setFixedHeight(40)
             btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffffff;
-                    color: #343A40;
-                    border: 1px solid #CED4DA;
-                    border-radius: 8px;
-                    margin: 6px 16px;
-                }
-                QPushButton:hover {
-                    background-color: #D0EBFF;
-                    border-color: #74C0FC;
-                }
+                 QPushButton {
+                background-color: #FFD700;
+                color: #6F2DA8;
+                border: 1px solid #E5C100;
+                border-radius: 10px;
+                margin: 6px 16px;
+            }
+            QPushButton:hover {
+                background-color: #FFF176;
+                border-color: #FDD835;
+            }
             """)
             btn.clicked.connect(accion)
             sidebar.addWidget(btn)
@@ -95,8 +96,7 @@ class VentanaPrincipal(QWidget):
         header = QLabel("Bienvenido al Sistema de Gestión")
         header.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setStyleSheet("color: #212529; padding: 20px;")
-
+        header.setStyleSheet("color: #6F2DA8; padding: 20px; background-color: #FFD700; border-radius: 10px;")
         content_layout.addWidget(header)
         content_layout.addWidget(self.stacked_widget)
         content_widget.setLayout(content_layout)
@@ -107,7 +107,6 @@ class VentanaPrincipal(QWidget):
 
     def abrir_compras(self):
         QMessageBox.information(self, "Compras", "Aquí iría la lógica para gestionar compras.")
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -53,22 +53,11 @@ class LoginWindow(QWidget):
         panel_izquierdo.setSpacing(15)
 
         logo = QLabel()
-        logo.setPixmap(QPixmap("logo.png").scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo.setPixmap(QPixmap("logo.png").scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        titulo = QLabel("🐰 Conejo Feliz")
-        titulo.setFont(QFont("Arial", 20, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a365d;")
-        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        subtitulo = QLabel("Sistema de Punto de Venta")
-        subtitulo.setFont(QFont("Arial", 12))
-        subtitulo.setStyleSheet("color: #4b5563;")
-        subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         panel_izquierdo.addWidget(logo)
-        panel_izquierdo.addWidget(titulo)
-        panel_izquierdo.addWidget(subtitulo)
         panel_izquierdo.addStretch()
 
         # Panel derecho (login form)
