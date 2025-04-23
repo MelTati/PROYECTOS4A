@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt, QDate
 
 from detalles_ventas import VentanaDetallesVentas
 from cliente import VentanaClientes
+from PyQt6.QtGui import QIcon
 
 # Conexión a MySQL
 conexion = mysql.connector.connect(
@@ -28,9 +29,9 @@ class VentanaVentas(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
 
-        # Tabla para mostrar las ventas
+        # Tabla
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(8)  # Se agregó una columna extra para el establecimiento
+        self.tabla.setColumnCount(8)
         self.tabla.setHorizontalHeaderLabels([
             "ID Venta", "Fecha Venta", "Usuario (Tel)", "Cliente (Tel)",
             "Código Artículo", "Nombre Artículo", "Cantidad", "Subtotal"
@@ -38,10 +39,9 @@ class VentanaVentas(QWidget):
         self.tabla.cellClicked.connect(self.seleccionar_fila)
         layout.addWidget(self.tabla)
 
-        # FORMULARIO
+        # Formulario
         form_layout = QHBoxLayout()
 
-        # Fecha Venta
         self.input_fecha = QDateEdit()
         self.input_fecha.setDisplayFormat("yyyy-MM-dd")
         self.input_fecha.setCalendarPopup(True)
@@ -51,13 +51,11 @@ class VentanaVentas(QWidget):
         self.input_fecha.setStyleSheet("QDateEdit { border: 1px solid #B0B0B0; border-radius: 10px; padding: 5px; }")
         form_layout.addWidget(self.input_fecha)
 
-        # Combo Usuarios
         self.combo_usuarios = QComboBox()
         self.combo_usuarios.setPlaceholderText("Seleccione un usuario")
         self.combo_usuarios.setStyleSheet("QComboBox { border: 1px solid #B0B0B0; border-radius: 10px; padding: 5px; }")
         form_layout.addWidget(self.combo_usuarios)
 
-        # Combo Clientes
         self.combo_clientes = QComboBox()
         self.combo_clientes.setPlaceholderText("Seleccione un cliente")
         self.combo_clientes.setStyleSheet("QComboBox { border: 1px solid #B0B0B0; border-radius: 10px; padding: 5px; }")
@@ -65,44 +63,69 @@ class VentanaVentas(QWidget):
 
         layout.addLayout(form_layout)
 
-        # BOTONES
+        # Botones
         botones_layout = QHBoxLayout()
-        
-        # Estilo de botones
-        btn_estilo = "QPushButton { background-color: #4CAF50; color: white; border-radius: 10px; padding: 10px; font-size: 14px; }"
-        btn_agregar = QPushButton("Agregar")
-        btn_actualizar = QPushButton("Actualizar")
-        btn_eliminar = QPushButton("Eliminar")
-        btn_detalles = QPushButton("Ver Detalles")
 
-        btn_agregar.setStyleSheet(btn_estilo)
-        btn_actualizar.setStyleSheet(btn_estilo)
-        btn_eliminar.setStyleSheet(btn_estilo)
-        btn_detalles.setStyleSheet(btn_estilo)
+        # Estilo moderno tipo Material Design
+        btn_estilo = """
+        QPushButton {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 18px;
+            font-size: 14px;
+        }
+        QPushButton:hover {
+            background-color: #2980b9;
+        }
+        QPushButton:pressed {
+            background-color: #1c5980;
+        }
+        """
 
+        # Crear botones con íconos
+        btn_agregar = QPushButton(" Agregar")
+        btn_agregar.setIcon(QIcon("icons/add.png"))  # Asegúrate de tener este ícono
+
+        btn_actualizar = QPushButton(" Actualizar")
+        btn_actualizar.setIcon(QIcon("icons/update.png"))
+
+        btn_eliminar = QPushButton(" Eliminar")
+        btn_eliminar.setIcon(QIcon("icons/delete.png"))
+
+        btn_detalles = QPushButton(" Detalles")
+        btn_detalles.setIcon(QIcon("icons/details.png"))
+
+        # Aplicar estilo
+        for btn in [btn_agregar, btn_actualizar, btn_eliminar, btn_detalles]:
+            btn.setStyleSheet(btn_estilo)
+
+        # Conectar señales
         btn_agregar.clicked.connect(self.agregar_venta)
         btn_actualizar.clicked.connect(self.actualizar_venta)
         btn_eliminar.clicked.connect(self.eliminar_venta)
         btn_detalles.clicked.connect(self.abrir_detalles_venta)
 
+        # Agregar botones al layout
         botones_layout.addWidget(btn_agregar)
         botones_layout.addWidget(btn_actualizar)
         botones_layout.addWidget(btn_eliminar)
         botones_layout.addWidget(btn_detalles)
 
-        # Botón para abrir la ventana de clientes
-        self.boton_clientes = QPushButton("Abrir Clientes")
+        # Botón clientes también estilizado
+        self.boton_clientes = QPushButton(" Clientes")
+        self.boton_clientes.setIcon(QIcon("icons/clients.png"))
+        self.boton_clientes.setStyleSheet(btn_estilo)
         self.boton_clientes.clicked.connect(self.abrir_clientes)
         layout.addWidget(self.boton_clientes)
         layout.addLayout(botones_layout)
-
         self.setLayout(layout)
 
     def abrir_clientes(self):
-        # Aquí se abre la ventana de clientes
         self.ventana_clientes = VentanaClientes()
-        self.ventana_clientes.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Para liberar recursos
-        self.ventana_clientes.destroyed.connect(self.cargar_datos)  # Recargar datos al cerrar
+        self.ventana_clientes.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.ventana_clientes.destroyed.connect(self.cargar_datos)
         self.ventana_clientes.show()
 
     def abrir_detalles_venta(self):
@@ -112,17 +135,13 @@ class VentanaVentas(QWidget):
             return
 
         venta_id = int(self.tabla.item(fila_seleccionada, 0).text())
-
-        # Crear y mostrar la ventana de detalles
-        self.detalles_ventas = VentanaDetallesVentas(venta_id)  # Suponiendo que recibe el ID de la venta
+        self.detalles_ventas = VentanaDetallesVentas(venta_id)
         self.detalles_ventas.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        # ✅ Conectar señal correcta
         self.detalles_ventas.detalle_modificado.connect(self.cargar_datos)
         self.detalles_ventas.show()
 
     def cargar_datos(self):
         try:
-            # Cargar usuarios
             cursor.execute("""
                 SELECT u.id_usuario, u.nombre_usuario, u.telefono, r.cargo
                 FROM usuarios u
@@ -136,7 +155,6 @@ class VentanaVentas(QWidget):
                     usuario["id_usuario"]
                 )
 
-            # Cargar clientes
             cursor.execute("SELECT id_cliente, nombre, telefono FROM cliente")
             clientes = cursor.fetchall()
             self.combo_clientes.clear()
@@ -146,7 +164,6 @@ class VentanaVentas(QWidget):
                     cliente["id_cliente"]
                 )
 
-            # Cargar ventas con detalles de artículos
             cursor.execute("""
                 SELECT v.id_ventas, v.fecha_venta,
                        u.nombre_usuario, u.telefono AS telefono_usuario,
@@ -167,11 +184,11 @@ class VentanaVentas(QWidget):
                 self.tabla.setItem(fila_num, 1, QTableWidgetItem(str(venta["fecha_venta"])))
                 self.tabla.setItem(fila_num, 2, QTableWidgetItem(f"{venta['nombre_usuario']} ({venta['telefono_usuario']})"))
                 self.tabla.setItem(fila_num, 3, QTableWidgetItem(f"{venta['nombre_cliente']} ({venta['telefono_cliente']})"))
-                self.tabla.setItem(fila_num, 4, QTableWidgetItem(str(venta["codigo_articulo"])))
+                self.tabla.setItem(fila_num, 4, QTableWidgetItem(str(venta["codigo_articulo"] or "")))
                 self.tabla.setItem(fila_num, 5, QTableWidgetItem(venta["nombre_articulo"] or ""))
                 self.tabla.setItem(fila_num, 6, QTableWidgetItem(str(venta["cantidad"] or "")))
                 self.tabla.setItem(fila_num, 7, QTableWidgetItem(str(venta["subtotal"] or "")))
-    
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo cargar la tabla: {e}")
 
@@ -188,7 +205,6 @@ class VentanaVentas(QWidget):
             self.combo_usuarios.setCurrentIndex(index_usuario)
         if index_cliente != -1:
             self.combo_clientes.setCurrentIndex(index_cliente)
-
 
     def validar_campos(self):
         if self.input_fecha.date() == self.input_fecha.minimumDate():
@@ -223,7 +239,7 @@ class VentanaVentas(QWidget):
                 self.input_fecha.date().toString("yyyy-MM-dd"),
                 self.combo_usuarios.currentData(),
                 self.combo_clientes.currentData(),
-                int(self.tabla.selectedItems()[0].text())  # ID de la venta desde la tabla
+                int(self.tabla.selectedItems()[0].text())
             )
             cursor.execute("""
                 UPDATE ventas
@@ -249,7 +265,6 @@ class VentanaVentas(QWidget):
 
         venta_id = int(venta_id_item.text())
 
-        # Confirmación
         confirmacion = QMessageBox.question(
             self,
             "Confirmar eliminación",
@@ -259,12 +274,9 @@ class VentanaVentas(QWidget):
 
         if confirmacion == QMessageBox.StandardButton.Yes:
             try:
-                # Eliminar detalles primero (si existen)
                 cursor.execute("DELETE FROM detalles_ventas WHERE id_ventas = %s", (venta_id,))
-                # Luego eliminar la venta
                 cursor.execute("DELETE FROM ventas WHERE id_ventas = %s", (venta_id,))
                 conexion.commit()
-
                 QMessageBox.information(self, "Éxito", "Venta eliminada correctamente")
                 self.cargar_datos()
             except Exception as e:
