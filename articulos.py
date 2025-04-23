@@ -123,6 +123,7 @@ class VentanaArticulos(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo agregar: {e}")
 
+
     def actualizar_articulo(self):
         if not self.validar_campos():
             return

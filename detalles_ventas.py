@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QPushButton,
     QTableWidget, QTableWidgetItem, QMessageBox
 )
+from PyQt6.QtCore import pyqtSignal  # 👈 Importar para señales personalizadas
 
 # Conexión a la base de datos
 conexion = mysql.connector.connect(
@@ -14,6 +15,7 @@ conexion = mysql.connector.connect(
 cursor = conexion.cursor(dictionary=True)
 
 class VentanaDetallesVentas(QWidget):
+    detalle_modificado = pyqtSignal()  # 👈 Señal personalizada
     def __init__(self, id_venta):
         super().__init__()
         self.id_venta = id_venta
@@ -26,14 +28,12 @@ class VentanaDetallesVentas(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
 
-        # Tabla de detalles
         self.tabla = QTableWidget()
         self.tabla.setColumnCount(4)
         self.tabla.setHorizontalHeaderLabels(["Código", "Nombre Artículo", "Cantidad", "Subtotal"])
         self.tabla.cellClicked.connect(self.seleccionar_fila)
         layout.addWidget(self.tabla)
 
-        # Formulario
         form_layout = QHBoxLayout()
 
         self.combo_articulos = QComboBox()
@@ -48,7 +48,6 @@ class VentanaDetallesVentas(QWidget):
 
         layout.addLayout(form_layout)
 
-        # Botones
         btn_layout = QHBoxLayout()
         self.btn_agregar = QPushButton("Agregar")
         self.btn_actualizar = QPushButton("Actualizar")
@@ -63,7 +62,6 @@ class VentanaDetallesVentas(QWidget):
         btn_layout.addWidget(self.btn_eliminar)
 
         layout.addLayout(btn_layout)
-
         self.setLayout(layout)
 
     def cargar_articulos(self):
@@ -76,12 +74,14 @@ class VentanaDetallesVentas(QWidget):
                     f"{articulo['nombre_articulo']} - ${articulo['precio_articulo']}",
                     (articulo["codigo_articulo"], articulo["precio_articulo"])
                 )
+            self.cargar_detalles()
+            self.detalle_modificado.emit() 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudieron cargar los artículos: {e}")
 
     def cargar_detalles(self):
         try:
-            cursor.execute("""
+            cursor.execute(""" 
                 SELECT dv.codigo_articulo, a.nombre_articulo, dv.cantidad, dv.subtotal
                 FROM detalles_ventas dv
                 JOIN articulos a ON dv.codigo_articulo = a.codigo_articulo
@@ -102,7 +102,6 @@ class VentanaDetallesVentas(QWidget):
         codigo = int(self.tabla.item(fila, 0).text())
         cantidad = int(self.tabla.item(fila, 2).text())
 
-        # Buscar el índice del artículo en el combo
         for i in range(self.combo_articulos.count()):
             cod_combo, _ = self.combo_articulos.itemData(i)
             if cod_combo == codigo:
@@ -125,6 +124,7 @@ class VentanaDetallesVentas(QWidget):
 
             QMessageBox.information(self, "Éxito", "Detalle agregado correctamente")
             self.cargar_detalles()
+            self.detalle_modificado.emit() 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo agregar el detalle: {e}")
 
@@ -148,6 +148,7 @@ class VentanaDetallesVentas(QWidget):
 
             QMessageBox.information(self, "Éxito", "Detalle actualizado correctamente")
             self.cargar_detalles()
+            self.detalle_modificado.emit() 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo actualizar el detalle: {e}")
 
@@ -175,5 +176,6 @@ class VentanaDetallesVentas(QWidget):
                 conexion.commit()
                 QMessageBox.information(self, "Éxito", "Detalle eliminado correctamente")
                 self.cargar_detalles()
+                self.detalle_modificado.emit()  # 👈 Emitir señal
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"No se pudo eliminar el detalle: {e}")

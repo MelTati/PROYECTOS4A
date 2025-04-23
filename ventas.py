@@ -30,10 +30,10 @@ class VentanaVentas(QWidget):
 
         # Tabla para mostrar las ventas
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(9)  # Se agregó una columna extra para el establecimiento
+        self.tabla.setColumnCount(8)  # Se agregó una columna extra para el establecimiento
         self.tabla.setHorizontalHeaderLabels([
             "ID Venta", "Fecha Venta", "Usuario (Tel)", "Cliente (Tel)",
-            "Código Artículo", "Nombre Artículo", "Cantidad", "Subtotal", "Establecimiento"
+            "Código Artículo", "Nombre Artículo", "Cantidad", "Subtotal"
         ])
         self.tabla.cellClicked.connect(self.seleccionar_fila)
         layout.addWidget(self.tabla)
@@ -62,12 +62,6 @@ class VentanaVentas(QWidget):
         self.combo_clientes.setPlaceholderText("Seleccione un cliente")
         self.combo_clientes.setStyleSheet("QComboBox { border: 1px solid #B0B0B0; border-radius: 10px; padding: 5px; }")
         form_layout.addWidget(self.combo_clientes)
-
-        # Combo Establecimientos
-        self.combo_establecimientos = QComboBox()
-        self.combo_establecimientos.setPlaceholderText("Seleccione un establecimiento")
-        self.combo_establecimientos.setStyleSheet("QComboBox { border: 1px solid #B0B0B0; border-radius: 10px; padding: 5px; }")
-        form_layout.addWidget(self.combo_establecimientos)
 
         layout.addLayout(form_layout)
 
@@ -107,6 +101,8 @@ class VentanaVentas(QWidget):
     def abrir_clientes(self):
         # Aquí se abre la ventana de clientes
         self.ventana_clientes = VentanaClientes()
+        self.ventana_clientes.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # Para liberar recursos
+        self.ventana_clientes.destroyed.connect(self.cargar_datos)  # Recargar datos al cerrar
         self.ventana_clientes.show()
 
     def abrir_detalles_venta(self):
@@ -119,6 +115,9 @@ class VentanaVentas(QWidget):
 
         # Crear y mostrar la ventana de detalles
         self.detalles_ventas = VentanaDetallesVentas(venta_id)  # Suponiendo que recibe el ID de la venta
+        self.detalles_ventas.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        # ✅ Conectar señal correcta
+        self.detalles_ventas.detalle_modificado.connect(self.cargar_datos)
         self.detalles_ventas.show()
 
     def cargar_datos(self):
@@ -147,27 +146,17 @@ class VentanaVentas(QWidget):
                     cliente["id_cliente"]
                 )
 
-            # Cargar establecimientos
-            cursor.execute("SELECT id_ticket, nombre_establec FROM ticket")
-            establecimientos = cursor.fetchall()
-            self.combo_establecimientos.clear()
-            for establecimiento in establecimientos:
-                self.combo_establecimientos.addItem(
-                    establecimiento['nombre_establec'], establecimiento['id_ticket']
-                )
-
             # Cargar ventas con detalles de artículos
             cursor.execute("""
                 SELECT v.id_ventas, v.fecha_venta,
                        u.nombre_usuario, u.telefono AS telefono_usuario,
                        c.nombre AS nombre_cliente, c.telefono AS telefono_cliente,
-                       dv.codigo_articulo, a.nombre_articulo, dv.cantidad, dv.subtotal, t.nombre_establec
+                       dv.codigo_articulo, a.nombre_articulo, dv.cantidad, dv.subtotal
                 FROM ventas v
                 JOIN usuarios u ON v.id_usuario = u.id_usuario
                 JOIN cliente c ON v.id_cliente = c.id_cliente
                 LEFT JOIN detalles_ventas dv ON v.id_ventas = dv.id_ventas
                 LEFT JOIN articulos a ON dv.codigo_articulo = a.codigo_articulo
-                LEFT JOIN ticket t ON v.id_ticket = t.id_ticket
             """)
             resultados = cursor.fetchall()
 
@@ -182,8 +171,7 @@ class VentanaVentas(QWidget):
                 self.tabla.setItem(fila_num, 5, QTableWidgetItem(venta["nombre_articulo"] or ""))
                 self.tabla.setItem(fila_num, 6, QTableWidgetItem(str(venta["cantidad"] or "")))
                 self.tabla.setItem(fila_num, 7, QTableWidgetItem(str(venta["subtotal"] or "")))
-                self.tabla.setItem(fila_num, 8, QTableWidgetItem(venta["nombre_establec"] or ""))  # Establecimiento
-
+    
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo cargar la tabla: {e}")
 
@@ -201,12 +189,6 @@ class VentanaVentas(QWidget):
         if index_cliente != -1:
             self.combo_clientes.setCurrentIndex(index_cliente)
 
-        # Establecer el establecimiento seleccionado en el combo
-        establecimiento_texto = self.tabla.item(fila, 8).text()  # Columna 8 es el nombre del establecimiento
-        index_establecimiento = self.combo_establecimientos.findText(establecimiento_texto, Qt.MatchStartsWith)
-        
-        if index_establecimiento != -1:
-            self.combo_establecimientos.setCurrentIndex(index_establecimiento)
 
     def validar_campos(self):
         if self.input_fecha.date() == self.input_fecha.minimumDate():
@@ -222,11 +204,10 @@ class VentanaVentas(QWidget):
                 self.input_fecha.date().toString("yyyy-MM-dd"),
                 self.combo_usuarios.currentData(),
                 self.combo_clientes.currentData(),
-                self.combo_establecimientos.currentData()  # Nuevo campo id_ticket
             )
             cursor.execute("""
-                INSERT INTO ventas (fecha_venta, id_usuario, id_cliente, id_ticket)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO ventas (fecha_venta, id_usuario, id_cliente)
+                VALUES (%s, %s, %s)
             """, datos)
             conexion.commit()
             QMessageBox.information(self, "Éxito", "Venta agregada correctamente")
@@ -242,12 +223,11 @@ class VentanaVentas(QWidget):
                 self.input_fecha.date().toString("yyyy-MM-dd"),
                 self.combo_usuarios.currentData(),
                 self.combo_clientes.currentData(),
-                self.combo_establecimientos.currentData(),  # Nuevo campo id_ticket
                 int(self.tabla.selectedItems()[0].text())  # ID de la venta desde la tabla
             )
             cursor.execute("""
                 UPDATE ventas
-                SET fecha_venta=%s, id_usuario=%s, id_cliente=%s, id_ticket=%s
+                SET fecha_venta=%s, id_usuario=%s, id_cliente=%s
                 WHERE id_ventas=%s
             """, datos)
             conexion.commit()

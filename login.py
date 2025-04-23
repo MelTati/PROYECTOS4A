@@ -1,8 +1,8 @@
 import sys
 import mysql.connector
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton,
-    QMessageBox, QApplication, QFrame
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QMessageBox, QApplication, QFrame, QGraphicsDropShadowEffect
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QFont
@@ -21,126 +21,116 @@ class LoginWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Inicio de Sesión")
-        self.setFixedSize(380, 320)  # Ventana más compacta
+        self.setFixedSize(700, 360)
         self.init_ui()
         self.apply_styles()
 
     def init_ui(self):
-        # Layout principal
-        layout_principal = QVBoxLayout()
-        layout_principal.setSpacing(8)
-        layout_principal.setContentsMargins(10, 10, 10, 10)  # Márgenes reducidos
+        # Layout principal horizontal
+        layout_principal = QHBoxLayout()
+        layout_principal.setContentsMargins(30, 30, 30, 30)
+        layout_principal.setSpacing(30)
 
-        # Logo
-        logo_container = QLabel()
-        logo_container.setFixedHeight(85)  # Altura fija para el contenedor del logo
-        logo_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_container.setStyleSheet("background-color: white; border-radius: 5px;")
-        
-        logo = QLabel(logo_container)
-        logo.setPixmap(QPixmap("logo.png").scaled(75, 75, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        logo_layout = QVBoxLayout(logo_container)
-        logo_layout.setContentsMargins(0, 0, 0, 0)
-        logo_layout.addWidget(logo)
-
-        # Título
-        titulo = QLabel("🐰 Conejo Feliz - Acceso")
-        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-        titulo.setStyleSheet("color: #1a365d; margin: 5px 0;")
-
-        # Caja de contenido
-        caja = QFrame()
-        caja.setFrameShape(QFrame.Shape.StyledPanel)
-        caja.setStyleSheet("""
+        # Caja de fondo con sombra
+        contenedor = QFrame()
+        contenedor.setStyleSheet("""
             QFrame {
-                background-color: #f8f9fa;
-                border-radius: 10px;
-                border: 1px solid #ccc;
-                padding: 15px;
+                background-color: white;
+                border-radius: 15px;
             }
         """)
-        
-        # Layout del contenido dentro de la caja
-        caja_layout = QVBoxLayout(caja)
-        caja_layout.setSpacing(12)
-        caja_layout.setContentsMargins(15, 15, 15, 15)
-        
-        # Campos de entrada con colores contrastantes
+        sombra = QGraphicsDropShadowEffect()
+        sombra.setBlurRadius(25)
+        sombra.setOffset(0, 8)
+        sombra.setColor(Qt.GlobalColor.black)
+        contenedor.setGraphicsEffect(sombra)
+
+        layout_contenedor = QHBoxLayout(contenedor)
+        layout_contenedor.setContentsMargins(20, 20, 20, 20)
+
+        # Panel izquierdo (logo + texto)
+        panel_izquierdo = QVBoxLayout()
+        panel_izquierdo.setSpacing(15)
+
+        logo = QLabel()
+        logo.setPixmap(QPixmap("logo.png").scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        titulo = QLabel("🐰 Conejo Feliz")
+        titulo.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        titulo.setStyleSheet("color: #1a365d;")
+        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        subtitulo = QLabel("Sistema de Punto de Venta")
+        subtitulo.setFont(QFont("Arial", 12))
+        subtitulo.setStyleSheet("color: #4b5563;")
+        subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        panel_izquierdo.addWidget(logo)
+        panel_izquierdo.addWidget(titulo)
+        panel_izquierdo.addWidget(subtitulo)
+        panel_izquierdo.addStretch()
+
+        # Panel derecho (login form)
+        panel_derecho = QVBoxLayout()
+        panel_derecho.setSpacing(15)
+
         self.input_usuario = QLineEdit()
-        self.input_usuario.setPlaceholderText("Ingrese su usuario")
-        self.input_usuario.setMinimumHeight(32)
-        self.input_usuario.setStyleSheet("""
-            QLineEdit {
-                padding: 5px 10px;
-                border: 1px solid #3498db;
-                border-radius: 5px;
-                background-color: #ffffff;
-                color: #000000;
-                font-size: 13px;
-            }
-        """)
+        self.input_usuario.setPlaceholderText("Usuario")
+        self.input_usuario.setMinimumHeight(36)
+        self.input_usuario.setStyleSheet(self.estilo_input())
 
         self.input_contrasena = QLineEdit()
-        self.input_contrasena.setPlaceholderText("Ingrese su contraseña")
+        self.input_contrasena.setPlaceholderText("Contraseña")
         self.input_contrasena.setEchoMode(QLineEdit.EchoMode.Password)
-        self.input_contrasena.setMinimumHeight(32)
-        self.input_contrasena.setStyleSheet("""
-            QLineEdit {
-                padding: 5px 10px;
-                border: 1px solid #3498db;
-                border-radius: 5px;
-                background-color: #ffffff;
-                color: #000000;
-                font-size: 13px;
-            }
-        """)
+        self.input_contrasena.setMinimumHeight(36)
+        self.input_contrasena.setStyleSheet(self.estilo_input())
 
-        # Botón de ingreso con alto contraste
         self.boton_ingresar = QPushButton("Iniciar sesión")
-        self.boton_ingresar.setMinimumHeight(35)
-        self.boton_ingresar.setFixedWidth(150)  # Ancho fijo para el botón
-        self.boton_ingresar.clicked.connect(self.verificar_credenciales)
+        self.boton_ingresar.setMinimumHeight(36)
         self.boton_ingresar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.boton_ingresar.clicked.connect(self.verificar_credenciales)
         self.boton_ingresar.setStyleSheet("""
             QPushButton {
-                background-color: #2563eb;
+                background-color: #b300b3 ;
                 color: white;
-                border: none;
-                border-radius: 5px;
+                border-radius: 6px;
                 font-size: 14px;
                 font-weight: bold;
-                padding: 5px 15px;
             }
             QPushButton:hover {
-                background-color: #1d4ed8;
+                background-color: #ffe6ff;
             }
         """)
 
-        # Agregar todo al layout de la caja
-        caja_layout.addWidget(self.input_usuario)
-        caja_layout.addWidget(self.input_contrasena)
-        caja_layout.addWidget(self.boton_ingresar, alignment=Qt.AlignmentFlag.AlignCenter)
+        panel_derecho.addWidget(self.input_usuario)
+        panel_derecho.addWidget(self.input_contrasena)
+        panel_derecho.addWidget(self.boton_ingresar)
+        panel_derecho.addStretch()
 
-        # Agregar widgets al layout principal
-        layout_principal.addWidget(logo_container)
-        layout_principal.addWidget(titulo)
-        layout_principal.addWidget(caja, 1)  # El 1 da más espacio a la caja
+        layout_contenedor.addLayout(panel_izquierdo, 1)
+        layout_contenedor.addLayout(panel_derecho, 1)
 
+        layout_principal.addWidget(contenedor)
         self.setLayout(layout_principal)
 
-    def apply_styles(self):
-        # Estilo global
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #ecf0f1;
+    def estilo_input(self):
+        return """
+            QLineEdit {
+                padding: 8px 12px;
+                border: 1px solid #b300b3;
+                border-radius: 6px;
+                background-color: #f9fafb;
+                font-size: 13px;
+                color: #b300b3;
             }
             QLineEdit::placeholder {
-                color: #94a3b8;
+                color: #9ca3af;
             }
-        """)
+        """
+
+    def apply_styles(self):
+        self.setStyleSheet("background-color: #e5e7eb;")
 
     def verificar_credenciales(self):
         usuario = self.input_usuario.text()
@@ -152,9 +142,9 @@ class LoginWindow(QWidget):
 
         try:
             cursor.execute("""
-               SELECT * FROM usuarios u
-               JOIN roles r ON u.id_roles = r.id_roles
-               WHERE u.nombre_usuario = %s AND u.password = %s AND r.cargo IN ('Supervisor', 'Cajero')
+                SELECT * FROM usuarios u
+                JOIN roles r ON u.id_roles = r.id_roles
+                WHERE u.nombre_usuario = %s AND u.password = %s AND r.cargo IN ('Supervisor', 'Cajero')
             """, (usuario, contrasena))
             resultado = cursor.fetchone()
 
@@ -172,3 +162,4 @@ if __name__ == "__main__":
     ventana_login = LoginWindow()
     ventana_login.show()
     sys.exit(app.exec())
+
