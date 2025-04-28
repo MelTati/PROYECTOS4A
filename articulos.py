@@ -1,9 +1,7 @@
-import sys
 import mysql.connector
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QMessageBox, QApplication,
-    QCheckBox, QComboBox, QLabel
+    QTableWidget, QTableWidgetItem, QMessageBox, QCheckBox, QComboBox, QLabel, QHeaderView
 )
 
 # Conexión a la base de datos
@@ -48,12 +46,22 @@ class VentanaArticulos(QWidget):
 
         # Tabla
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(7)
+        self.tabla.setColumnCount(8)
         self.tabla.setHorizontalHeaderLabels([
-            "Código", "Nombre", "Activo", "Precio", "Costo", "Categoría", "Marca"
+            "Código", "Nombre", "Activo", "Precio", "Costo", "Categoría", "Marca", "Descripción"
         ])
         self.tabla.cellClicked.connect(self.seleccionar_fila)
         layout.addWidget(self.tabla)
+
+        # Ajuste de ancho para todas las columnas (0 al 7)
+        self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # ID
+        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Código
+        self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)           # Nombre
+        self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Precio
+        self.tabla.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)  # Costo
+        self.tabla.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Stock
+        self.tabla.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)           # Marca
+        self.tabla.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)           # Categoría
 
         # Formulario
         form_layout = QHBoxLayout()
@@ -64,11 +72,15 @@ class VentanaArticulos(QWidget):
         self.input_costo = QLineEdit()
         self.combo_categoria = QComboBox()
         self.combo_marca = QComboBox()
+        self.input_descripcion = QLineEdit()
+
 
         self.input_codigo.setPlaceholderText("Codigo")
         self.input_nombre.setPlaceholderText("Nombre")
         self.input_precio.setPlaceholderText("Precio")
         self.input_costo.setPlaceholderText("Costo")
+        self.input_descripcion.setPlaceholderText("Descripcion")
+
     
         form_layout.addWidget(self.input_codigo)
         form_layout.addWidget(self.input_nombre)
@@ -77,6 +89,7 @@ class VentanaArticulos(QWidget):
         form_layout.addWidget(self.input_costo)
         form_layout.addWidget(self.combo_categoria)
         form_layout.addWidget(self.combo_marca)
+        form_layout.addWidget(self.input_descripcion)
         layout.addLayout(form_layout)
 
         # Botones
@@ -133,7 +146,7 @@ class VentanaArticulos(QWidget):
         query = """
             SELECT a.codigo_articulo, a.nombre_articulo, a.activacion_articulo,
                    a.precio_articulo, a.costo_articulo,
-                   c.tipo_categoria, m.nombre_marca
+                   c.tipo_categoria, m.nombre_marca, a.descr_caracteristicas
             FROM articulos a
             JOIN categorias c ON a.id_categorias = c.id_categorias
             JOIN marcas m ON a.id_marca = m.id_marca
@@ -141,7 +154,7 @@ class VentanaArticulos(QWidget):
               AND (%s IS NULL OR a.id_marca = %s)
         """
         
-        cursor.execute(query, (categoria_id, categoria_id, marca_id, marca_id))
+        cursor.execute(query, (categoria_id,categoria_id, marca_id, marca_id ))
         resultados = cursor.fetchall()
 
         self.tabla.setRowCount(0)
@@ -154,6 +167,8 @@ class VentanaArticulos(QWidget):
             self.tabla.setItem(fila, 4, QTableWidgetItem(str(art["costo_articulo"])))
             self.tabla.setItem(fila, 5, QTableWidgetItem(art["tipo_categoria"]))
             self.tabla.setItem(fila, 6, QTableWidgetItem(art["nombre_marca"]))
+            self.tabla.setItem(fila, 7, QTableWidgetItem(art["descr_caracteristicas"] or ""))
+
 
     def seleccionar_fila(self, fila, _):
         self.codigo_seleccionado = self.tabla.item(fila, 0).text()
@@ -163,10 +178,28 @@ class VentanaArticulos(QWidget):
         self.input_precio.setText(self.tabla.item(fila, 3).text())
         self.input_costo.setText(self.tabla.item(fila, 4).text())
 
+        try:
+            self.combo_categoria.setCurrentIndex(self.combo_categoria.findText(self.tabla.item(fila, 5).text()))
+        except (ValueError, AttributeError):
+            pass
+
+        try:
+            self.combo_marca.setCurrentIndex(self.combo_marca.findText(self.tabla.item(fila, 6).text()))
+        except (ValueError, AttributeError):
+            pass
+
+        self.input_descripcion.setText(self.tabla.item(fila, 7).text())
+
     def validar_campos(self):
-        if not self.input_codigo.text().strip():
-            QMessageBox.warning(self, "Advertencia", "Código es obligatorio.")
-            return False
+        if not self.input_codigo.text().strip() or \
+            not self.input_nombre.text().strip() or \
+            not self.input_descripcion.text().strip() or \
+            not self.input_precio.text().strip().replace('.', '', 1).isdigit() or \
+            not self.input_costo.text().strip().replace('.', '', 1).isdigit() or \
+            self.combo_categoria.currentIndex() == -1 or \
+            self.combo_marca.currentIndex() == -1:
+                QMessageBox.warning(self, "Advertencia", "Por favor complete todos los campos.")
+                return False
         return True
 
     def agregar_articulo(self):
@@ -179,12 +212,13 @@ class VentanaArticulos(QWidget):
             int(self.input_precio.text()) if self.input_precio.text() else None,
             int(self.input_costo.text()) if self.input_costo.text() else None,
             self.combo_categoria.currentData(),
-            self.combo_marca.currentData()
+            self.combo_marca.currentData(),
+            self.input_descripcion.text().strip()
         )
         cursor.execute("""
             INSERT INTO articulos (codigo_articulo, nombre_articulo, activacion_articulo,
-                                   precio_articulo, costo_articulo, id_categorias, id_marca)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                   precio_articulo, costo_articulo, id_categorias, id_marca, descr_caracteristicas)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, datos)
         conexion.commit()
         QMessageBox.information(self, "Éxito", "Artículo agregado correctamente")
@@ -201,12 +235,13 @@ class VentanaArticulos(QWidget):
             int(self.input_costo.text()) if self.input_costo.text() else None,
             self.combo_categoria.currentData(),
             self.combo_marca.currentData(),
-            self.codigo_seleccionado
+            self.input_descripcion.text().strip() or None,
+            self.codigo_seleccionado        
         )
         cursor.execute("""
             UPDATE articulos
             SET nombre_articulo = %s, activacion_articulo = %s, precio_articulo = %s,
-                costo_articulo = %s, id_categorias = %s, id_marca = %s
+                costo_articulo = %s, id_categorias = %s, id_marca = %s, descr_caracteristicas = %s
             WHERE codigo_articulo = %s
         """, datos)
         conexion.commit()
@@ -218,11 +253,20 @@ class VentanaArticulos(QWidget):
         if not hasattr(self, 'codigo_seleccionado') or not self.codigo_seleccionado:
             QMessageBox.warning(self, "Advertencia", "Selecciona un artículo.")
             return
-        cursor.execute("DELETE FROM articulos WHERE codigo_articulo = %s", (self.codigo_seleccionado,))
-        conexion.commit()
-        QMessageBox.information(self, "Éxito", "Artículo eliminado correctamente")
-        self.cargar_datos()
-        self.limpiar_campos()
+        
+        # Confirmación antes de eliminar
+        respuesta = QMessageBox.question(
+            self, "Confirmación", "¿Estás seguro de que deseas eliminar este artículo?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if respuesta == QMessageBox.StandardButton.Yes:
+            cursor.execute("DELETE FROM articulos WHERE codigo_articulo = %s", (self.codigo_seleccionado,))
+            conexion.commit()
+            QMessageBox.information(self, "Éxito", "Artículo eliminado correctamente")
+            self.cargar_datos()
+            self.limpiar_campos()
+
 
     def limpiar_campos(self):
         self.input_codigo.clear()
@@ -232,3 +276,5 @@ class VentanaArticulos(QWidget):
         self.input_costo.clear()
         self.combo_categoria.setCurrentIndex(0)
         self.combo_marca.setCurrentIndex(0)
+        self.input_descripcion.clear()
+

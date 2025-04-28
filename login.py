@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QApplication, QFrame, QGraphicsDropShadowEffect
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap, QFont
+from PyQt6.QtGui import QPixmap
 from principal import VentanaPrincipal
 
 # Conexión a MySQL
