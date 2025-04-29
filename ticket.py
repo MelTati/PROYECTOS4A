@@ -30,7 +30,7 @@ class VentanaTickets(QWidget):
 
 
     def init_ui(self):
-        
+
         # Fondo degradado
         self.setStyleSheet("""
             QWidget {
@@ -44,7 +44,7 @@ class VentanaTickets(QWidget):
 
         layout = QVBoxLayout()
 
-        # ---------------- Encabezado bonito ----------------
+        # ---------------- Encabezado ----------------
         header = QLabel("🎟️ Gestión de Tickets")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header.setStyleSheet("""
@@ -397,7 +397,7 @@ class VentanaTickets(QWidget):
                 QMessageBox.critical(self, "Error", "No se pudo iniciar la impresión.")
                 return
             
-            fuente = QFont("Courier New", 4)
+            fuente = QFont("Courier New", 3)
             painter.setFont(fuente)
             fm = painter.fontMetrics()
             line_height = fm.height()
