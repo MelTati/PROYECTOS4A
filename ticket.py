@@ -1,7 +1,6 @@
-import sys
 import mysql.connector
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit,
+    QWidget, QVBoxLayout, QHBoxLayout, QLineEdit,
     QPushButton, QTableWidget, QTableWidgetItem, QMessageBox, QComboBox,QFileDialog
 )
 import qrcode
@@ -27,16 +26,14 @@ class VentanaTickets(QWidget):
         self.resize(1000, 500)
         self.init_ui()
         self.cargar_datos()
-
     def init_ui(self):
         layout = QVBoxLayout()
 
         # Tabla de los datos que van en los encabezados del ticket 
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(8)
+        self.tabla.setColumnCount(6)
         self.tabla.setHorizontalHeaderLabels([
-            "ID Ticket", "Establecimiento", "Dirección", "Modo de Pago",
-            "ID Venta", "Fecha Venta", "Usuario", "Cliente"
+            "ID Ticket", "Modo de Pago","ID Venta", "Fecha Venta", "Usuario", "Cliente"
         ])
         self.tabla.cellClicked.connect(self.seleccionar_fila)
         layout.addWidget(self.tabla)
@@ -44,18 +41,12 @@ class VentanaTickets(QWidget):
         # Campos de entrada
         form_layout = QHBoxLayout()
         self.input_id = QLineEdit()
-        self.input_nombre = QLineEdit()
-        self.input_direccion = QLineEdit()
         self.combo_pago = QComboBox()
         self.combo_ventas = QComboBox()
 
         self.input_id.setPlaceholderText("ID Ticket")
-        self.input_nombre.setPlaceholderText("Nombre Establecimiento")
-        self.input_direccion.setPlaceholderText("Dirección Establecimiento")
-
+        
         form_layout.addWidget(self.input_id)
-        form_layout.addWidget(self.input_nombre)
-        form_layout.addWidget(self.input_direccion)
         form_layout.addWidget(self.combo_pago)
         form_layout.addWidget(self.combo_ventas)
         layout.addLayout(form_layout)
@@ -106,8 +97,6 @@ class VentanaTickets(QWidget):
             cursor.execute("""
                 SELECT
                     t.id_ticket,
-                    t.nombre_establec,
-                    t.direcc_establec,
                     m.tipo AS modo_pago,
                     v.id_ventas,
                     v.fecha_venta,
@@ -125,28 +114,24 @@ class VentanaTickets(QWidget):
             for i, ticket in enumerate(resultados):
                 self.tabla.insertRow(i)
                 self.tabla.setItem(i, 0, QTableWidgetItem(ticket["id_ticket"]))
-                self.tabla.setItem(i, 1, QTableWidgetItem(ticket["nombre_establec"]))
-                self.tabla.setItem(i, 2, QTableWidgetItem(ticket["direcc_establec"]))
-                self.tabla.setItem(i, 3, QTableWidgetItem(ticket["modo_pago"]))
-                self.tabla.setItem(i, 4, QTableWidgetItem(str(ticket["id_ventas"])))
-                self.tabla.setItem(i, 5, QTableWidgetItem(ticket["fecha_venta"]))
-                self.tabla.setItem(i, 6, QTableWidgetItem(ticket["nombre_usuario"]))
-                self.tabla.setItem(i, 7, QTableWidgetItem(ticket["nombre_cliente"]))
+                self.tabla.setItem(i, 1, QTableWidgetItem(ticket["modo_pago"]))
+                self.tabla.setItem(i, 2, QTableWidgetItem(str(ticket["id_ventas"])))
+                self.tabla.setItem(i, 3, QTableWidgetItem(ticket["fecha_venta"]))
+                self.tabla.setItem(i, 4, QTableWidgetItem(ticket["nombre_usuario"]))
+                self.tabla.setItem(i, 5, QTableWidgetItem(ticket["nombre_cliente"]))
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudieron cargar los datos: {e}")
 
     def seleccionar_fila(self, fila, _):
         self.input_id.setText(self.tabla.item(fila, 0).text())
-        self.input_nombre.setText(self.tabla.item(fila, 1).text())
-        self.input_direccion.setText(self.tabla.item(fila, 2).text())
 
-        tipo_pago = self.tabla.item(fila, 3).text()
+        tipo_pago = self.tabla.item(fila, 1).text()
         index_pago = self.combo_pago.findText(tipo_pago)
         if index_pago != -1:
             self.combo_pago.setCurrentIndex(index_pago)
 
-        id_venta = self.tabla.item(fila, 4).text()
+        id_venta = self.tabla.item(fila, 2).text()
         for i in range(self.combo_ventas.count()):
             if str(self.combo_ventas.itemData(i)) == id_venta:
                 self.combo_ventas.setCurrentIndex(i)
@@ -154,13 +139,11 @@ class VentanaTickets(QWidget):
 
     def limpiar_campos(self):
         self.input_id.clear()
-        self.input_nombre.clear()
-        self.input_direccion.clear()
         self.combo_pago.setCurrentIndex(0)
         self.combo_ventas.setCurrentIndex(0)
 
     def validar_campos(self):
-        if not all([self.input_id.text(), self.input_nombre.text(), self.input_direccion.text()]):
+        if not all([self.input_id.text()]):
             QMessageBox.warning(self, "Advertencia", "Por favor, complete todos los campos.")
             return False
         return True
@@ -173,14 +156,12 @@ class VentanaTickets(QWidget):
             id_ventas = self.combo_ventas.currentData()
             datos = (
                 self.input_id.text(),
-                self.input_nombre.text(),
-                self.input_direccion.text(),
                 id_modo_pago,
                 id_ventas
             )
             cursor.execute("""
-                INSERT INTO ticket (id_ticket, nombre_establec, direcc_establec, id_modo_pago, id_ventas)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO ticket (id_ticket, id_modo_pago, id_ventas)
+                VALUES (%s, %s, %s)
             """, datos)
             conexion.commit()
             QMessageBox.information(self, "Éxito", "Ticket agregado correctamente")
@@ -196,15 +177,13 @@ class VentanaTickets(QWidget):
             id_modo_pago = self.combo_pago.currentData()
             id_ventas = self.combo_ventas.currentData()
             datos = (
-                self.input_nombre.text(),
-                self.input_direccion.text(),
                 id_modo_pago,
                 id_ventas,
                 self.input_id.text()
             )
             cursor.execute("""
                 UPDATE ticket
-                SET nombre_establec=%s, direcc_establec=%s, id_modo_pago=%s, id_ventas=%s
+                SET id_modo_pago=%s, id_ventas=%s
                 WHERE id_ticket=%s
             """, datos)
             conexion.commit()
@@ -252,8 +231,6 @@ class VentanaTickets(QWidget):
             cursor.execute("""
                 SELECT
                     t.id_ticket,
-                    t.nombre_establec,
-                    t.direcc_establec,
                     m.tipo AS modo_pago,
                     v.id_ventas,
                     v.fecha_venta,
@@ -335,7 +312,7 @@ class VentanaTickets(QWidget):
             # Encabezado
             est = resultado[0]
             draw_line("=" * 40)
-            draw_line(est['nombre_establec'].center(40))
+            draw_line("Dulceria el conejo Feliz".center(40))
 
             # Cargar imagen desde URL y dibujar el logo
             logo_url = "https://dulceriaelconejofeliz.com/assets/logo-gqZwOJrA.png"
@@ -362,7 +339,7 @@ class VentanaTickets(QWidget):
             except Exception as e:
                 print(f"Error al cargar el logo: {e}")
 
-            draw_line(est['direcc_establec'].center(40))
+            draw_line("Av 3a. Sur Pte 548, Centro, 29000 Tuxtla Gutiérrez, Chis.".center(40))
             draw_line("-" * 40)
             draw_line(f"Ticket: {est['id_ticket']}    Venta: {est['id_ventas']}")
             draw_line(f"Fecha: {str(est['fecha_venta'])}")
