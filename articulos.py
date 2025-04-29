@@ -32,12 +32,18 @@ class VentanaArticulos(QWidget):
         # Filtros
         filtro_layout = QHBoxLayout()
 
+        self.buscador = QLineEdit()
+        self.buscador.setPlaceholderText("Buscar por Código o Nombre...")
+        self.buscador.textChanged.connect(self.cargar_datos) 
+
         self.filtro_categoria = QComboBox()
         self.filtro_categoria.currentIndexChanged.connect(self.cargar_datos)
 
         self.filtro_marca = QComboBox()
         self.filtro_marca.currentIndexChanged.connect(self.cargar_datos)
 
+        filtro_layout.addWidget(QLabel("Buscar:"))
+        filtro_layout.addWidget(self.buscador)
         filtro_layout.addWidget(QLabel("Filtrar por Categoría:"))
         filtro_layout.addWidget(self.filtro_categoria)
         filtro_layout.addWidget(QLabel("Filtrar por Marca:"))
@@ -142,6 +148,7 @@ class VentanaArticulos(QWidget):
     def cargar_datos(self):
         categoria_id = self.filtro_categoria.currentData()
         marca_id = self.filtro_marca.currentData()
+        texto_busqueda = self.buscador.text().strip()
 
         query = """
             SELECT a.codigo_articulo, a.nombre_articulo, a.activacion_articulo,
@@ -152,9 +159,11 @@ class VentanaArticulos(QWidget):
             JOIN marcas m ON a.id_marca = m.id_marca
             WHERE (%s IS NULL OR a.id_categorias = %s)
               AND (%s IS NULL OR a.id_marca = %s)
+              AND (a.codigo_articulo LIKE %s OR a.nombre_articulo LIKE %s)
         """
-        
-        cursor.execute(query, (categoria_id,categoria_id, marca_id, marca_id ))
+        texto_busqueda_wildcard = f"%{texto_busqueda}%"
+
+        cursor.execute(query, (categoria_id,categoria_id, marca_id, marca_id, texto_busqueda_wildcard, texto_busqueda_wildcard))
         resultados = cursor.fetchall()
 
         self.tabla.setRowCount(0)
