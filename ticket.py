@@ -1,7 +1,7 @@
 import mysql.connector
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLineEdit,
-    QPushButton, QTableWidget, QTableWidgetItem, QMessageBox, QComboBox,QFileDialog
+    QPushButton, QTableWidget, QTableWidgetItem, QMessageBox, QComboBox,QFileDialog, QLabel
 )
 import qrcode
 from PyQt6.QtGui import QPainter, QFont, QPageSize, QPageLayout, QFontMetrics, QImage
@@ -20,43 +20,145 @@ conexion = mysql.connector.connect(
 cursor = conexion.cursor(dictionary=True)
 
 class VentanaTickets(QWidget):
+    
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Gestión de Tickets")
         self.resize(1000, 500)
         self.init_ui()
         self.cargar_datos()
+
+
     def init_ui(self):
+        
+        # Fondo degradado
+        self.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 1,
+                    stop: 0 #E0F7FA,
+                    stop: 1 #FFFFFF
+                );
+            }
+        """)
+
         layout = QVBoxLayout()
 
-        # Tabla de los datos que van en los encabezados del ticket 
+        # ---------------- Encabezado bonito ----------------
+        header = QLabel("🎟️ Gestión de Tickets")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.setStyleSheet("""
+            QLabel {
+                font-size: 32px;
+                font-weight: bold;
+                color: #FFD700;
+                text-shadow: 2px 2px 4px #000000;
+            }
+        """)
+        layout.addWidget(header)
+
+        # ---------------- Tabla ----------------
         self.tabla = QTableWidget()
         self.tabla.setColumnCount(6)
         self.tabla.setHorizontalHeaderLabels([
-            "ID Ticket", "Modo de Pago","ID Venta", "Fecha Venta", "Usuario", "Cliente"
+            "ID Ticket", "Modo de Pago", "ID Venta", "Fecha Venta", "Usuario", "Cliente"
         ])
         self.tabla.cellClicked.connect(self.seleccionar_fila)
         layout.addWidget(self.tabla)
 
-        # Campos de entrada
+        # ---------------- Campos de entrada ----------------
         form_layout = QHBoxLayout()
         self.input_id = QLineEdit()
         self.combo_pago = QComboBox()
         self.combo_ventas = QComboBox()
 
         self.input_id.setPlaceholderText("ID Ticket")
-        
+
+        self.input_id.setStyleSheet("""
+            QLineEdit {
+                border: 2px solid #FFD700;
+                border-radius: 10px;
+                padding: 5px;
+                background-color: #FFFFFF;
+            }
+        """)
+        self.combo_pago.setStyleSheet("""
+            QComboBox {
+                border: 2px solid #800080;
+                border-radius: 10px;
+                padding: 5px;
+                background-color: #FFFFFF;
+            }
+        """)
+        self.combo_ventas.setStyleSheet("""
+            QComboBox {
+                border: 2px solid #FF1493;
+                border-radius: 10px;
+                padding: 5px;
+                background-color: #FFFFFF;
+            }
+        """)
+
         form_layout.addWidget(self.input_id)
         form_layout.addWidget(self.combo_pago)
         form_layout.addWidget(self.combo_ventas)
         layout.addLayout(form_layout)
 
-        # Botones
+        # ---------------- Botones ----------------
         btn_layout = QHBoxLayout()
         btn_agregar = QPushButton("Agregar")
         btn_actualizar = QPushButton("Actualizar")
         btn_eliminar = QPushButton("Eliminar")
         btn_imprimir = QPushButton("Imprimir")
+
+        btn_agregar.setStyleSheet("""
+            QPushButton {
+                background-color: #FFD700;
+                color: #000000;
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FFC107;
+            }
+        """)
+        btn_actualizar.setStyleSheet("""
+            QPushButton {
+                background-color: #800080;
+                color: #FFFFFF;
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #9A32CD;
+            }
+        """)
+        btn_eliminar.setStyleSheet("""
+            QPushButton {
+                background-color: #FF1493;
+                color: #FFFFFF;
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FF69B4;
+            }
+        """)
+        btn_imprimir.setStyleSheet("""
+            QPushButton {
+                background-color: #87CEFA;
+                color: #000000;
+                border-radius: 15px;
+                padding: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #00BFFF;
+            }
+        """)
 
         btn_agregar.clicked.connect(self.agregar_ticket)
         btn_actualizar.clicked.connect(self.actualizar_ticket)
