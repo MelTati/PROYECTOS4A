@@ -158,7 +158,7 @@ class VentanaDetallesVentas(QWidget):
             QMessageBox.warning(self, "Advertencia", "Seleccione un detalle para eliminar.")
             return
 
-        codigo_articulo = int(self.tabla.item(fila, 0).text())
+        codigo_articulo = self.tabla.item(fila, 0).text()
 
         confirmacion = QMessageBox.question(
             self,

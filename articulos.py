@@ -218,8 +218,8 @@ class VentanaArticulos(QWidget):
             self.input_codigo.text().strip(),
             self.input_nombre.text().strip() or None,
             1 if self.checkbox_activado.isChecked() else 0,
-            int(self.input_precio.text()) if self.input_precio.text() else None,
-            int(self.input_costo.text()) if self.input_costo.text() else None,
+            float(self.input_precio.text()) if self.input_precio.text() else None,
+            float(self.input_costo.text()) if self.input_costo.text() else None,
             self.combo_categoria.currentData(),
             self.combo_marca.currentData(),
             self.input_descripcion.text().strip()
@@ -240,8 +240,8 @@ class VentanaArticulos(QWidget):
         datos = (
             self.input_nombre.text().strip() or None,
             1 if self.checkbox_activado.isChecked() else 0,
-            int(self.input_precio.text()) if self.input_precio.text() else None,
-            int(self.input_costo.text()) if self.input_costo.text() else None,
+            float(self.input_precio.text()) if self.input_precio.text() else None,
+            float(self.input_costo.text()) if self.input_costo.text() else None,
             self.combo_categoria.currentData(),
             self.combo_marca.currentData(),
             self.input_descripcion.text().strip() or None,
