@@ -3,28 +3,32 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QMessageBox, QComboBox, QDateEdit, QLabel, QApplication
 )
-from PyQt6.QtCore import Qt, QDate
-
+from PyQt6.QtCore import Qt, QDate, pyqtSignal
 from detalles_ventas import VentanaDetallesVentas
 from cliente import VentanaClientes
 from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import QTimer
 
 # Conexión a MySQL
 conexion = mysql.connector.connect(
     host="localhost",
     user="root",
     password="mysql",
-    database="mydb_conejo_feliz"
+    database="mydb_conejo_feliz",
+    autocommit=True
 )
 cursor = conexion.cursor(dictionary=True)
 
 class VentanaVentas(QWidget):
+    actualizar_ventas_signal = pyqtSignal()
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Gestión de Ventas")
         self.resize(950, 400)
         self.init_ui()
         self.cargar_datos()
+        self.actualizar_ventas_signal.connect(self.cargar_datos)
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -66,7 +70,6 @@ class VentanaVentas(QWidget):
         # Botones
         botones_layout = QHBoxLayout()
 
-        # Estilo moderno tipo Material Design
         btn_estilo = """
         QPushButton {
             background-color: #3498db;
@@ -84,36 +87,28 @@ class VentanaVentas(QWidget):
         }
         """
 
-        # Crear botones con íconos
         btn_agregar = QPushButton(" Agregar")
-        btn_agregar.setIcon(QIcon("icons/add.png"))  # Asegúrate de tener este ícono
-
+        btn_agregar.setIcon(QIcon("icons/add.png"))
         btn_actualizar = QPushButton(" Actualizar")
         btn_actualizar.setIcon(QIcon("icons/update.png"))
-
         btn_eliminar = QPushButton(" Eliminar")
         btn_eliminar.setIcon(QIcon("icons/delete.png"))
-
         btn_detalles = QPushButton(" Detalles")
         btn_detalles.setIcon(QIcon("icons/details.png"))
 
-        # Aplicar estilo
         for btn in [btn_agregar, btn_actualizar, btn_eliminar, btn_detalles]:
             btn.setStyleSheet(btn_estilo)
 
-        # Conectar señales
         btn_agregar.clicked.connect(self.agregar_venta)
         btn_actualizar.clicked.connect(self.actualizar_venta)
         btn_eliminar.clicked.connect(self.eliminar_venta)
         btn_detalles.clicked.connect(self.abrir_detalles_venta)
 
-        # Agregar botones al layout
         botones_layout.addWidget(btn_agregar)
         botones_layout.addWidget(btn_actualizar)
         botones_layout.addWidget(btn_eliminar)
         botones_layout.addWidget(btn_detalles)
 
-        # Botón clientes también estilizado
         self.boton_clientes = QPushButton(" Clientes")
         self.boton_clientes.setIcon(QIcon("icons/clients.png"))
         self.boton_clientes.setStyleSheet(btn_estilo)
@@ -135,14 +130,79 @@ class VentanaVentas(QWidget):
             return
 
         venta_id = int(self.tabla.item(fila_seleccionada, 0).text())
+        
+        # Cerrar ventana anterior si existe
+        if hasattr(self, 'detalles_ventas'):
+            self.detalles_ventas.close()
+        
+        # Crear nueva ventana con conexión fuerte de señal
         self.detalles_ventas = VentanaDetallesVentas(venta_id)
         self.detalles_ventas.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.detalles_ventas.detalle_modificado.connect(self.cargar_datos)
+        self.detalles_ventas.detalle_modificado.connect(
+            lambda: self.actualizar_fila_venta(venta_id))
         self.detalles_ventas.show()
+
+    def actualizar_fila_venta(self, venta_id):
+        """Actualiza específicamente la fila de la venta modificada"""
+        try:
+            # Encontrar la fila correspondiente
+            fila = -1
+            for row in range(self.tabla.rowCount()):
+                if int(self.tabla.item(row, 0).text()) == venta_id:
+                    fila = row
+                    break
+            
+            if fila == -1:
+                return
+
+            # Obtener datos actualizados
+            cursor.execute("""
+                SELECT v.id_ventas, v.fecha_venta,
+                       u.nombre_usuario, u.telefono AS telefono_usuario,
+                       c.nombre AS nombre_cliente, c.telefono AS telefono_cliente,
+                       dv.codigo_articulo, a.nombre_articulo, dv.cantidad, dv.subtotal
+                FROM ventas v
+                JOIN usuarios u ON v.id_usuario = u.id_usuario
+                JOIN cliente c ON v.id_cliente = c.id_cliente
+                LEFT JOIN detalles_ventas dv ON v.id_ventas = dv.id_ventas
+                LEFT JOIN articulos a ON dv.codigo_articulo = a.codigo_articulo
+                WHERE v.id_ventas = %s
+                LIMIT 1
+            """, (venta_id,))
+            venta = cursor.fetchone()
+
+            if venta:
+                # Actualizar datos en la tabla
+                self.tabla.setItem(fila, 1, QTableWidgetItem(str(venta["fecha_venta"])))
+                self.tabla.setItem(fila, 4, QTableWidgetItem(str(venta["codigo_articulo"] or "")))
+                self.tabla.setItem(fila, 5, QTableWidgetItem(venta["nombre_articulo"] or ""))
+                self.tabla.setItem(fila, 6, QTableWidgetItem(str(venta["cantidad"] or "")))
+                self.tabla.setItem(fila, 7, QTableWidgetItem(str(venta["subtotal"] or "")))
+
+                # Actualizar tooltip con información completa
+                cursor.execute("""
+                    SELECT COUNT(*) as total_articulos, SUM(subtotal) as total_venta
+                    FROM detalles_ventas
+                    WHERE id_ventas = %s
+                """, (venta_id,))
+                totales = cursor.fetchone()
+                
+                if totales["total_articulos"] > 1:
+                    tooltip = f"Total artículos: {totales['total_articulos']}\nTotal venta: ${totales['total_venta']:.2f}"
+                    for col in range(4, 8):
+                        if self.tabla.item(fila, col):
+                            self.tabla.item(fila, col).setToolTip(tooltip)
+            
+            # Forzar actualización visual
+            QApplication.processEvents()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo actualizar la venta: {e}")
 
     def cargar_datos(self):
         try:
-            cursor.execute("""
+            # Cargar usuarios
+            cursor.execute(""" 
                 SELECT u.id_usuario, u.nombre_usuario, u.telefono, r.cargo
                 FROM usuarios u
                 JOIN roles r ON u.id_roles = r.id_roles
@@ -155,6 +215,7 @@ class VentanaVentas(QWidget):
                     usuario["id_usuario"]
                 )
 
+            # Cargar clientes
             cursor.execute("SELECT id_cliente, nombre, telefono FROM cliente")
             clientes = cursor.fetchall()
             self.combo_clientes.clear()
@@ -164,6 +225,7 @@ class VentanaVentas(QWidget):
                     cliente["id_cliente"]
                 )
 
+            # Cargar ventas
             cursor.execute("""
                 SELECT v.id_ventas, v.fecha_venta,
                        u.nombre_usuario, u.telefono AS telefono_usuario,
@@ -174,6 +236,7 @@ class VentanaVentas(QWidget):
                 JOIN cliente c ON v.id_cliente = c.id_cliente
                 LEFT JOIN detalles_ventas dv ON v.id_ventas = dv.id_ventas
                 LEFT JOIN articulos a ON dv.codigo_articulo = a.codigo_articulo
+                GROUP BY v.id_ventas, dv.codigo_articulo
             """)
             resultados = cursor.fetchall()
 
@@ -193,6 +256,7 @@ class VentanaVentas(QWidget):
             QMessageBox.critical(self, "Error", f"No se pudo cargar la tabla: {e}")
 
     def seleccionar_fila(self, fila, _):
+
         self.input_fecha.setDate(QDate.fromString(self.tabla.item(fila, 1).text(), "yyyy-MM-dd"))
 
         usuario_texto = self.tabla.item(fila, 2).text().split(" (")[0]
@@ -227,7 +291,7 @@ class VentanaVentas(QWidget):
             """, datos)
             conexion.commit()
             QMessageBox.information(self, "Éxito", "Venta agregada correctamente")
-            self.cargar_datos()
+            self.actualizar_ventas_signal.emit()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo agregar: {e}")
 
@@ -248,7 +312,7 @@ class VentanaVentas(QWidget):
             """, datos)
             conexion.commit()
             QMessageBox.information(self, "Éxito", "Venta actualizada correctamente")
-            self.cargar_datos()
+            self.actualizar_ventas_signal.emit()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo actualizar: {e}")
 
@@ -278,6 +342,7 @@ class VentanaVentas(QWidget):
                 cursor.execute("DELETE FROM ventas WHERE id_ventas = %s", (venta_id,))
                 conexion.commit()
                 QMessageBox.information(self, "Éxito", "Venta eliminada correctamente")
-                self.cargar_datos()
+                self.actualizar_ventas_signal.emit()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"No se pudo eliminar la venta: {e}")
+       
