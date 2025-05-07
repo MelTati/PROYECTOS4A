@@ -13,9 +13,9 @@ conexion = mysql.connector.connect(
     host="localhost",
     user="root",
     password="mysql",
-    database="mydb_conejo_feliz",
-    autocommit=True
+    database="mydb_conejo_feliz"
 )
+conexion.autocommit = True
 cursor = conexion.cursor(dictionary=True)
 
 class VentanaDetallesVentas(QWidget):
