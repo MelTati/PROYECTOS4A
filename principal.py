@@ -12,7 +12,7 @@ from articulos import VentanaArticulos
 from ventana_usuarios import VentanaUsuarios
 from ticket import VentanaTickets
 from proveedores import VentanaProveedor
-
+from compras import VentanaCompras
 
 class VentanaPrincipal(QWidget):
     def __init__(self):
@@ -30,6 +30,7 @@ class VentanaPrincipal(QWidget):
         self.articulos = VentanaArticulos()
         self.usuarios = VentanaUsuarios()
         self.ticket = VentanaTickets()
+        self.compras = VentanaCompras()
         self.proveedores = VentanaProveedor()
 
         # Agregar widgets al stack
@@ -38,6 +39,7 @@ class VentanaPrincipal(QWidget):
         self.stacked_widget.addWidget(self.articulos)
         self.stacked_widget.addWidget(self.usuarios)
         self.stacked_widget.addWidget(self.ticket)
+        self.stacked_widget.addWidget(self.compras)
         self.stacked_widget.addWidget(self.proveedores)
         self.initUI()
 
@@ -59,8 +61,8 @@ class VentanaPrincipal(QWidget):
             ("Artículos", lambda: self.stacked_widget.setCurrentIndex(2)),
             ("Usuarios", lambda: self.stacked_widget.setCurrentIndex(3)),
             ("Tickets", lambda: self.stacked_widget.setCurrentIndex(4)),
-            ("Compras", self.abrir_compras),
-            ("Proveedor", lambda: self.stacked_widget.setCurrentIndex(5))
+            ("Compras", lambda: self.stacked_widget.setCurrentIndex(5)),
+            ("Proveedor", lambda: self.stacked_widget.setCurrentIndex(6))
         ]
 
         label_title = QLabel("Menú Principal")
@@ -107,9 +109,6 @@ class VentanaPrincipal(QWidget):
         main_layout.addWidget(sidebar_widget)
         main_layout.addWidget(content_widget)
         self.setLayout(main_layout)
-
-    def abrir_compras(self):
-        QMessageBox.information(self, "Compras", "Aquí iría la lógica para gestionar compras.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
