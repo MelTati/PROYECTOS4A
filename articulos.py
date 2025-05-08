@@ -1,10 +1,10 @@
 import mysql.connector
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QMessageBox, QCheckBox, QComboBox, QLabel, QHeaderView
+    QTableWidget, QTableWidgetItem, QMessageBox, QCheckBox, QComboBox, QLabel, QHeaderView, QApplication
 )
+from PyQt6.QtGui import QColor
 
-# Conexión a la base de datos
 conexion = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -52,14 +52,14 @@ class VentanaArticulos(QWidget):
 
         # Tabla
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(8)
+        self.tabla.setColumnCount(11)
         self.tabla.setHorizontalHeaderLabels([
-            "Código", "Nombre", "Activo", "Precio", "Costo", "Categoría", "Marca", "Descripción"
+            "Código", "Nombre", "Activo", "Precio", "Costo", "Categoría", "Marca", "Descripción", "Cantidad_Minima","Cantidad_Maxima","Stock"
         ])
         self.tabla.cellClicked.connect(self.seleccionar_fila)
         layout.addWidget(self.tabla)
 
-        # Ajuste de ancho para todas las columnas (0 al 7)
+        # Ajuste de ancho para todas las columnas (0 al 11)
         self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # ID
         self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Código
         self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)           # Nombre
@@ -68,6 +68,9 @@ class VentanaArticulos(QWidget):
         self.tabla.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Stock
         self.tabla.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)           # Marca
         self.tabla.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.Stretch)           # Categoría
+        self.tabla.horizontalHeader().setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents)  #Cantidad_minima_articulos
+        self.tabla.horizontalHeader().setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents)  #Cantidad_maxima_articulos
+        self.tabla.horizontalHeader().setSectionResizeMode(10, QHeaderView.ResizeMode.ResizeToContents) #Stock
 
         # Formulario
         form_layout = QHBoxLayout()
@@ -79,6 +82,9 @@ class VentanaArticulos(QWidget):
         self.combo_categoria = QComboBox()
         self.combo_marca = QComboBox()
         self.input_descripcion = QLineEdit()
+        self.input_cantidad_maxima = QLineEdit()
+        self.input_cantidad_minima = QLineEdit()
+        self.stock = QLineEdit()
 
 
         self.input_codigo.setPlaceholderText("Codigo")
@@ -86,8 +92,11 @@ class VentanaArticulos(QWidget):
         self.input_precio.setPlaceholderText("Precio")
         self.input_costo.setPlaceholderText("Costo")
         self.input_descripcion.setPlaceholderText("Descripcion")
-
+        self.input_cantidad_maxima.setPlaceholderText("Cantidad_maxima")
+        self.input_cantidad_minima.setPlaceholderText("Cantidad_minima")
+        self.stock.setPlaceholderText("Stock")
     
+
         form_layout.addWidget(self.input_codigo)
         form_layout.addWidget(self.input_nombre)
         form_layout.addWidget(self.checkbox_activado)
@@ -96,7 +105,11 @@ class VentanaArticulos(QWidget):
         form_layout.addWidget(self.combo_categoria)
         form_layout.addWidget(self.combo_marca)
         form_layout.addWidget(self.input_descripcion)
+        form_layout.addWidget(self.input_cantidad_maxima)
+        form_layout.addWidget(self.input_cantidad_minima)
+        form_layout.addWidget(self.stock)
         layout.addLayout(form_layout)
+
 
         # Botones
         botones_layout = QHBoxLayout()
@@ -152,21 +165,30 @@ class VentanaArticulos(QWidget):
 
         query = """
             SELECT a.codigo_articulo, a.nombre_articulo, a.activacion_articulo,
-                   a.precio_articulo, a.costo_articulo,
-                   c.tipo_categoria, m.nombre_marca, a.descr_caracteristicas
+                a.precio_articulo, a.costo_articulo,
+                c.tipo_categoria, m.nombre_marca, a.descr_caracteristicas,
+                a.cantidad_maxima, a.cantidad_minima,
+                COALESCE(a.stock, 0) + COALESCE(SUM(dc.cantidad), 0) - COALESCE(SUM(dv.cantidad), 0) AS stock
             FROM articulos a
             JOIN categorias c ON a.id_categorias = c.id_categorias
             JOIN marcas m ON a.id_marca = m.id_marca
+            LEFT JOIN detalles_compras dc ON a.codigo_articulo = dc.codigo_articulo
+            LEFT JOIN detalles_ventas dv ON a.codigo_articulo = dv.codigo_articulo
             WHERE (%s IS NULL OR a.id_categorias = %s)
-              AND (%s IS NULL OR a.id_marca = %s)
-              AND (a.codigo_articulo LIKE %s OR a.nombre_articulo LIKE %s)
+            AND (%s IS NULL OR a.id_marca = %s)
+            AND (a.codigo_articulo LIKE %s OR a.nombre_articulo LIKE %s)
+            GROUP BY a.codigo_articulo, a.nombre_articulo, a.activacion_articulo, 
+                    a.precio_articulo, a.costo_articulo, c.tipo_categoria, 
+                    m.nombre_marca, a.descr_caracteristicas, a.cantidad_maxima, 
+                    a.cantidad_minima
         """
         texto_busqueda_wildcard = f"%{texto_busqueda}%"
-
-        cursor.execute(query, (categoria_id,categoria_id, marca_id, marca_id, texto_busqueda_wildcard, texto_busqueda_wildcard))
+        cursor.execute(query, (categoria_id, categoria_id, marca_id, marca_id, texto_busqueda_wildcard, texto_busqueda_wildcard))
         resultados = cursor.fetchall()
 
         self.tabla.setRowCount(0)
+        articulos_stock_bajo = []  # Lista para nombres con stock bajo o crítico
+
         for fila, art in enumerate(resultados):
             self.tabla.insertRow(fila)
             self.tabla.setItem(fila, 0, QTableWidgetItem(art["codigo_articulo"]))
@@ -177,7 +199,37 @@ class VentanaArticulos(QWidget):
             self.tabla.setItem(fila, 5, QTableWidgetItem(art["tipo_categoria"]))
             self.tabla.setItem(fila, 6, QTableWidgetItem(art["nombre_marca"]))
             self.tabla.setItem(fila, 7, QTableWidgetItem(art["descr_caracteristicas"] or ""))
+            self.tabla.setItem(fila, 8, QTableWidgetItem(str(art["cantidad_maxima"])))
+            self.tabla.setItem(fila, 9, QTableWidgetItem(str(art["cantidad_minima"])))
 
+
+            # Stock y color
+            item_stock = QTableWidgetItem(str(art["stock"]))
+            stock = art["stock"]
+            cantidad_minima = art["cantidad_minima"]
+
+            if stock > cantidad_minima:
+                item_stock.setBackground(QColor("lightblue"))
+            elif stock == cantidad_minima:
+                item_stock.setBackground(QColor("yellow"))   
+                articulos_stock_bajo.append(f'{art["nombre_articulo"]} (Stock: {stock})')
+            else:
+                item_stock.setBackground(QColor("red")) 
+                articulos_stock_bajo.append(f'{art["nombre_articulo"]} (Stock: {stock})')
+
+            self.tabla.setItem(fila, 10, item_stock)
+
+        # Mostrar advertencia si se está filtrando
+        se_esta_filtrando = (
+            categoria_id is not None or 
+            marca_id is not None or 
+            texto_busqueda != ""
+        )
+
+        if se_esta_filtrando and articulos_stock_bajo:
+            mensaje = "Los siguientes artículos tienen stock bajo o crítico:\n\n"
+            mensaje += "\n".join(articulos_stock_bajo)
+            QMessageBox.warning(self, "Stock bajo", mensaje)
 
     def seleccionar_fila(self, fila, _):
         self.codigo_seleccionado = self.tabla.item(fila, 0).text()
@@ -186,6 +238,9 @@ class VentanaArticulos(QWidget):
         self.checkbox_activado.setChecked(self.tabla.item(fila, 2).text() == "Sí")
         self.input_precio.setText(self.tabla.item(fila, 3).text())
         self.input_costo.setText(self.tabla.item(fila, 4).text())
+        self.input_cantidad_maxima.setText(self.tabla.item(fila, 5).text())
+        self.input_cantidad_minima.setText(self.tabla.item(fila, 6).text())
+        self.stock.setText(self.tabla.item(fila, 7).text())
 
         try:
             self.combo_categoria.setCurrentIndex(self.combo_categoria.findText(self.tabla.item(fila, 5).text()))
@@ -206,7 +261,10 @@ class VentanaArticulos(QWidget):
             not self.input_precio.text().strip().replace('.', '', 1).isdigit() or \
             not self.input_costo.text().strip().replace('.', '', 1).isdigit() or \
             self.combo_categoria.currentIndex() == -1 or \
-            self.combo_marca.currentIndex() == -1:
+            self.combo_marca.currentIndex() == -1 or \
+            not self.input_cantidad_maxima.text().strip().replace('.', '', 1).isdigit() or\
+            not self.input_cantidad_minima.text().strip().replace('.', '', 1).isdigit() or\
+            not self.stock.text().strip().replace('.', '', 1).isdigit():
                 QMessageBox.warning(self, "Advertencia", "Por favor complete todos los campos.")
                 return False
         return True
@@ -222,17 +280,22 @@ class VentanaArticulos(QWidget):
             float(self.input_costo.text()) if self.input_costo.text() else None,
             self.combo_categoria.currentData(),
             self.combo_marca.currentData(),
-            self.input_descripcion.text().strip()
+            self.input_descripcion.text().strip(),
+            int(self.input_cantidad_maxima.text()) if self.input_cantidad_maxima.text() else None,
+            int(self.input_cantidad_minima.text()) if self.input_cantidad_minima.text() else None,
+            int(self.stock.text()) if self.stock.text() else None
         )
         cursor.execute("""
             INSERT INTO articulos (codigo_articulo, nombre_articulo, activacion_articulo,
-                                   precio_articulo, costo_articulo, id_categorias, id_marca, descr_caracteristicas)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                   precio_articulo, costo_articulo, id_categorias, id_marca, descr_caracteristicas,
+                                   cantidad_maxima, cantidad_minima, stock)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, datos)
         conexion.commit()
         QMessageBox.information(self, "Éxito", "Artículo agregado correctamente")
         self.cargar_datos()
         self.limpiar_campos()
+
 
     def actualizar_articulo(self):
         if not self.validar_campos():
@@ -245,18 +308,23 @@ class VentanaArticulos(QWidget):
             self.combo_categoria.currentData(),
             self.combo_marca.currentData(),
             self.input_descripcion.text().strip() or None,
+            int(self.input_cantidad_maxima.text()) if self.input_cantidad_maxima.text() else None,
+            int(self.input_cantidad_minima.text()) if self.input_cantidad_minima.text() else None,
+            int(self.stock.text()) if self.stock.text() else None,
             self.codigo_seleccionado        
         )
         cursor.execute("""
             UPDATE articulos
             SET nombre_articulo = %s, activacion_articulo = %s, precio_articulo = %s,
-                costo_articulo = %s, id_categorias = %s, id_marca = %s, descr_caracteristicas = %s
+                costo_articulo = %s, id_categorias = %s, id_marca = %s, descr_caracteristicas = %s, 
+                cantidad_maxima = %s, cantidad_minima =%s, stock = %s
             WHERE codigo_articulo = %s
         """, datos)
         conexion.commit()
         QMessageBox.information(self, "Éxito", "Artículo actualizado correctamente")
         self.cargar_datos()
         self.limpiar_campos()
+
 
     def eliminar_articulo(self):
         if not hasattr(self, 'codigo_seleccionado') or not self.codigo_seleccionado:
@@ -286,4 +354,5 @@ class VentanaArticulos(QWidget):
         self.combo_categoria.setCurrentIndex(0)
         self.combo_marca.setCurrentIndex(0)
         self.input_descripcion.clear()
-
+        self.input_cantidad_maxima.clear()
+        self.input_cantidad_minima.clear()

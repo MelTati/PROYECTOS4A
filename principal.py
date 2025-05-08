@@ -13,7 +13,8 @@ from ventana_usuarios import VentanaUsuarios
 from ticket import VentanaTickets
 from proveedores import VentanaProveedor
 from compras import VentanaCompras
-
+from marcas import VentanaMarcas
+from categorias import VentanaCategorias
 class VentanaPrincipal(QWidget):
     def __init__(self):
         super().__init__()
@@ -26,21 +27,25 @@ class VentanaPrincipal(QWidget):
 
         # Crear instancias de las ventanas
         self.ventas = VentanaVentas()
+        self.ticket = VentanaTickets()
         self.clientes = VentanaClientes()
         self.articulos = VentanaArticulos()
         self.usuarios = VentanaUsuarios()
-        self.ticket = VentanaTickets()
         self.compras = VentanaCompras()
         self.proveedores = VentanaProveedor()
+        self.marcas = VentanaMarcas()
+        self.categorias = VentanaCategorias()
 
         # Agregar widgets al stack
         self.stacked_widget.addWidget(self.ventas)
+        self.stacked_widget.addWidget(self.ticket)
         self.stacked_widget.addWidget(self.clientes)
         self.stacked_widget.addWidget(self.articulos)
         self.stacked_widget.addWidget(self.usuarios)
-        self.stacked_widget.addWidget(self.ticket)
         self.stacked_widget.addWidget(self.compras)
         self.stacked_widget.addWidget(self.proveedores)
+        self.stacked_widget.addWidget(self.marcas)
+        self.stacked_widget.addWidget(self.categorias)
         self.initUI()
 
     def initUI(self):
@@ -57,12 +62,14 @@ class VentanaPrincipal(QWidget):
 
         botones = [
             ("Ventas", lambda: self.stacked_widget.setCurrentIndex(0)),
-            ("Clientes", lambda: self.stacked_widget.setCurrentIndex(1)),
-            ("Artículos", lambda: self.stacked_widget.setCurrentIndex(2)),
-            ("Usuarios", lambda: self.stacked_widget.setCurrentIndex(3)),
-            ("Tickets", lambda: self.stacked_widget.setCurrentIndex(4)),
+             ("Tickets", lambda: self.stacked_widget.setCurrentIndex(1)),
+            ("Clientes", lambda: self.stacked_widget.setCurrentIndex(2)),
+            ("Artículos", lambda: self.stacked_widget.setCurrentIndex(3)),
+            ("Usuarios", lambda: self.stacked_widget.setCurrentIndex(4)),
             ("Compras", lambda: self.stacked_widget.setCurrentIndex(5)),
-            ("Proveedor", lambda: self.stacked_widget.setCurrentIndex(6))
+            ("Proveedor", lambda: self.stacked_widget.setCurrentIndex(6)),
+            ("Marcas", lambda: self.stacked_widget.setCurrentIndex(7)),
+            ("Categorias", lambda: self.stacked_widget.setCurrentIndex(8))
         ]
 
         label_title = QLabel("Menú Principal")
