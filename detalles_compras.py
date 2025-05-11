@@ -242,11 +242,3 @@ class VentanaDetallesCompras(QWidget):
     def closeEvent(self, event):
         self.detalle_modificado.emit()
         event.accept()
-
-
-if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-    ventana = VentanaDetallesCompras()
-    ventana.show()
-    sys.exit(app.exec())
