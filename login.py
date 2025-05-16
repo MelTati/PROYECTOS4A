@@ -141,6 +141,7 @@ class LoginWindow(QWidget):
                 self.hide()
                 self.ventana_principal = VentanaPrincipal()
                 self.ventana_principal.show()
+                
             else:
                 QMessageBox.critical(self, "Acceso denegado", "Credenciales incorrectas o no eres Supervisor o Cajero.")
         except Exception as e:
