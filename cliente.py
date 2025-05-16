@@ -1,4 +1,3 @@
-import sys
 import mysql.connector
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton,
@@ -135,5 +134,3 @@ class VentanaClientes(QWidget):
             self.input_telefono.clear()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo eliminar: {e}")
-
-

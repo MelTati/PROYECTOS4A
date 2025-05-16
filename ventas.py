@@ -122,7 +122,7 @@ class VentanaVentas(QWidget):
         self.ventana_clientes.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.ventana_clientes.destroyed.connect(self.cargar_datos)
         self.ventana_clientes.show()
-
+    
     def abrir_detalles_venta(self):
         fila_seleccionada = self.tabla.currentRow()
         if fila_seleccionada < 0:
@@ -345,4 +345,3 @@ class VentanaVentas(QWidget):
                 self.actualizar_ventas_signal.emit()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"No se pudo eliminar la venta: {e}")
-       
